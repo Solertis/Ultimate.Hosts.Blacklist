@@ -491,11 +491,11 @@ class Initiate(object):
         """
 
         if not repo:  # pragma: no cover
-            with Pool(cpu_count() // Settings.core_usage) as pool:
+            with Pool((cpu_count() // Settings.core_usage) * 10) as pool:
                 for domains, ips in pool.map(
                     self.data_extractor, Settings.repositories
                 ):
-                    Settings.domains.extend(domains))
+                    Settings.domains.extend(domains)
                     Settings.ips.extend(ips)
 
                     Settings.domains = Helpers.List(Settings.domains).format()
@@ -554,7 +554,7 @@ class Generate(object):  # pragma: no cover
                 self.super_hosts_deny_format,
             ]
 
-            with Pool(cpu_count() // Settings.core_usage) as pool:
+            with Pool((cpu_count() // Settings.core_usage) * 10) as pool:
                 pool.map(self._execute, to_execute)
 
             print("\n")
@@ -758,7 +758,7 @@ class Compress(object):  # pragma: no cover   # pylint: disable=too-few-public-m
             Settings.hosts_unix_file,
         ]
 
-        with Pool(cpu_count() // Settings.core_usage) as pool:
+        with Pool((cpu_count() // Settings.core_usage) * 10) as pool:
             pool.map(self.compression_logic, to_compresss)
 
     @classmethod
