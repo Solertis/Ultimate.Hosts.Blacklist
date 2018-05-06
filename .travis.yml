@@ -7,7 +7,7 @@ env:
     - GIT_NAME: Travis CI
     - GIT_EMAIL: mitchellkrog@gmail.com
     - TRAVIS_REPO_SLUG: mitchellkrogza/Ultimate.Hosts.Blacklist
-    - GIT_BRANCH: master
+    - GIT_BRANCH: dev
 
 language: python
 
@@ -28,7 +28,7 @@ before_install:
   - sudo apt-get -y install dos2unix
 
 script:
-  - python update.py
+  - python tests_update.py && python update.py
 
 notifications:
   email: false
