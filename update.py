@@ -100,7 +100,7 @@ class Settings(object):  # pragma: no cover  # pylint: disable=too-few-public-me
     repositories = []
 
     # This variable set the repository to ignore.
-    repo_to_ignore = ["repository-structure", "whitelist"]
+    repo_to_ignore = ["repository-structure", "whitelist","dev-center"]
 
     # This variable save the list of all domains.
     #
@@ -495,8 +495,8 @@ class Initiate(object):
                 for domains, ips in pool.map(
                     self.data_extractor, Settings.repositories
                 ):
-                    Settings.domains.extend(Helpers.List(domains).format())
-                    Settings.ips.extend(Helpers.List(ips).format())
+                    Settings.domains.extend(domains))
+                    Settings.ips.extend(ips)
 
                     Settings.domains = Helpers.List(Settings.domains).format()
                     Settings.ips = Helpers.List(Settings.ips).format()
