@@ -440,6 +440,7 @@ class TestHelpers(BaseStdout):
         # Test of the case that we want to read a file.
         expected = """requests==2.18.4
 requests_mock==1.4.0
+colorama==0.3.9
 """
 
         actual = Helpers.File("requirements.txt").read()
