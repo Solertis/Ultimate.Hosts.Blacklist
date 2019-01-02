@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-This module has been written because we are seeking a new repository structure.
+This script is used to update and generate the files.
 
 Authors:
     - @Funilrys, Nissar Chababy <contactTAfunilrysTODcom>
@@ -16,8 +16,7 @@ Contributors:
 
 # pylint: disable=too-many-lines, bad-continuation
 
-from multiprocessing import Pool
-from os import cpu_count, environ, path, remove
+from os import environ, path, remove
 from os import sep as directory_separator
 from re import compile as comp
 from re import escape
@@ -31,7 +30,7 @@ from zipfile import ZipFile
 from requests import get
 
 
-class Settings(object):  # pragma: no cover  # pylint: disable=too-few-public-methods
+class Settings:  # pylint: disable=too-few-public-methods
     """
     This class will save all data that can be called from anywhere in the code.
     """
@@ -44,18 +43,6 @@ class Settings(object):  # pragma: no cover  # pylint: disable=too-few-public-me
         github_api_token = environ["GH_TOKEN"]
     except KeyError:
         github_api_token = ""
-
-    try:
-        _ = environ["TRAVIS_BUILD_DIR"]
-        # This represent the divider of the number of core to alocate when
-        # extracting domains and IPs.
-        #
-        # For example:
-        #   If you have 4 core we do 4 // core_usage to get the number of core
-        #   we are allowed to use.
-        core_usage = 1
-    except KeyError:
-        core_usage = 2
 
     # This variable set the GitHub repository slug.
     #
@@ -100,7 +87,7 @@ class Settings(object):  # pragma: no cover  # pylint: disable=too-few-public-me
     repositories = []
 
     # This variable set the repository to ignore.
-    repo_to_ignore = ["repository-structure", "whitelist","dev-center"]
+    repo_to_ignore = ["repository-structure", "whitelist"]
 
     # This variable save the list of all domains.
     #
@@ -113,24 +100,6 @@ class Settings(object):  # pragma: no cover  # pylint: disable=too-few-public-me
     # Note: DO NOT TOUCH UNLESS YOU KNOW WHAT IT MEANS!
     # Note: This variable is auto updated by Initiate()
     ips = []
-
-    # This variable save the list of all whitelisted domain.
-    #
-    # Note: DO NOT TOUCH UNLESS YOU KNOW WHAT IT MEANS!
-    # Note: This variable is auto updated by Initiate()
-    whitelist = []
-
-    # This variable save the list of all whitelisted domain in regex format.
-    #
-    # Note: DO NOT TOUCH UNLESS YOU KNOW WHAT IT MEANS!
-    # Note: This variable is auto updated by Initiate()
-    regex_whitelist = ""
-
-    # This variable is used to set the marker that we use to say that we
-    # match all occurence of the domain or IP.
-    #
-    # Note: DO NOT TOUCH UNLESS YOU KNOW WHAT IT MEANS!
-    whitelist_all_marker = "ALL "
 
     # This variable set the regex to use to catch IPv4.
     #
@@ -153,16 +122,6 @@ class Settings(object):  # pragma: no cover  # pylint: disable=too-few-public-me
         )
     except KeyError:
         version = strftime("%s")
-
-    # This variable set the counter of the number of domains.
-    #
-    # Note: DO NOT TOUCH UNLESS YOU KNOW WHAT IT MEANS!
-    number_of_domains = 0
-
-    # This variable set the counter of the number of ips.
-    #
-    # Note: DO NOT TOUCH UNLESS YOU KNOW WHAT IT MEANS!
-    number_of_ips = 0
 
     # This variable set the location of the templates directory.
     #
@@ -241,23 +200,21 @@ class Settings(object):  # pragma: no cover  # pylint: disable=too-few-public-me
     error = "✘"
 
 
-class Initiate(object):
+class Initiate:
     """
     This class is used as the main entry of the script.
     Please note that this class also initiate several actions before being
     used or called.
     """
 
-    def __init__(self):  # pragma: no cover
-        if __name__ == "__main__":
-            self.travis()
-            Helpers.travis_permissions()
-            self.get_whitelist()
-            self.list_of_input_sources()
-            self.data_extractor()
+    def __init__(self):
+        self.travis()
+        Helpers.travis_permissions()
+        self.list_of_input_sources()
+        self.data_extractor()
 
     @classmethod
-    def travis(cls):  # pragma: no cover
+    def travis(cls):
         """
         Initiate Travis CI settings.
         """
@@ -294,68 +251,7 @@ class Initiate(object):
             pass
 
     @classmethod
-    def _whitelist_parser(cls, line):
-        """
-        This method will get and parse all whitelist domain into
-        Settings.whitelist.
-
-        Argument:
-            - line: str
-                The extracted line.
-        """
-
-        if line and not line.startswith("#"):
-            if line.startswith(Settings.whitelist_all_marker):
-                to_check = line.split(Settings.whitelist_all_marker)[1].strip()
-                regex_whitelist = escape(to_check) + "$"
-            else:
-                to_check = line.strip()
-
-                if not to_check.startswith("www."):
-                    regex_whitelist = [
-                        "^%s$" % escape(to_check), "^%s$" % escape("www." + to_check)
-                    ]
-                else:
-                    regex_whitelist = [
-                        "^%s$" % escape(to_check),
-                        "^%s$" % escape(".".join(to_check.split(".")[1:])),
-                    ]
-
-            if Helpers.Regex(
-                to_check, Settings.regex_ip4, return_data=False
-            ).match() or Helpers.Regex(
-                to_check, Settings.regex_domain, return_data=False
-            ).match() or line.startswith(
-                Settings.whitelist_all_marker
-            ):
-
-                if isinstance(regex_whitelist, list):
-                    Settings.whitelist.extend(regex_whitelist)
-                else:
-                    Settings.whitelist.append(regex_whitelist)
-
-    def get_whitelist(self):
-        """
-        This method will get the list of whitelisted domain.
-        """
-
-        domains_url = (
-            Settings.raw_link + "domains.list"
-        ) % Settings.whitelist_repo_name
-
-        req = get(domains_url)
-
-        print("Getting %s" % Settings.whitelist_repo_name, end=" ")
-        if req.status_code == 200:
-            list(map(self._whitelist_parser, req.text.split("\n")))
-
-            Settings.regex_whitelist = "|".join(Settings.whitelist)
-            print(Settings.done)
-        else:
-            print(Settings.error)
-
-    @classmethod
-    def list_of_input_sources(cls):  # pragma: no cover
+    def list_of_input_sources(cls):
         """
         This method get the list of input sources to check.
         """
@@ -377,9 +273,7 @@ class Initiate(object):
                     r".*page=(.*)>.*",
                     return_data=True,
                     rematch=True,
-                ).match()[
-                    -1
-                ]
+                ).match()[-1]
             )
 
             current_page = 1
@@ -407,7 +301,7 @@ class Initiate(object):
                     print(Settings.error)
                     raise Exception(
                         "Impossible to get information about the organisation. Is GitHub down ? (%s)"  # pylint: disable=line-too-long
-                        % req.status_code
+                        % req.status_code  # pylint: disable=line-too-long
                     )
 
                 current_page += 1
@@ -441,15 +335,24 @@ class Initiate(object):
         if not line.startswith("#"):
 
             if "#" in line:
-                line = line[:line.find("#")].strip()
+                line = line[: line.find("#")]
 
-            if " " in line or "\t" in line:
+            tabs = "\t"
+            space = " "
+
+            line = line.strip()
+
+            if tabs in line or space in line:
                 splited_line = line.split()
 
-                return splited_line[-1]
+                index = 1
+                while index < len(splited_line):
+                    if splited_line[index]:
+                        break
+                    index += 1
 
+                return splited_line[index]
             return line
-
         return ""
 
     @classmethod
@@ -467,42 +370,23 @@ class Initiate(object):
             line = cls._format_line(line.strip())
             regex_exclude = r"((192)\.(168)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))|((10)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))|((172)\.(1[6-9]|2[0-9]|3[0-1])\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))"  # pylint: disable=line-too-long
 
-            if Settings.regex_whitelist and Helpers.Regex(
-                line, Settings.regex_whitelist, return_data=False
-            ).match():
-                return
-
-            if Helpers.Regex(
-                line, Settings.regex_ip4, return_data=False
-            ).match() and not Helpers.Regex(
-                line, regex_exclude, return_data=False
-            ).match():
+            if (
+                Helpers.Regex(line, Settings.regex_ip4, return_data=False).match()
+                and not Helpers.Regex(line, regex_exclude, return_data=False).match()
+            ):
 
                 Settings.ips.append(line)
             elif Helpers.Regex(line, Settings.regex_domain, return_data=False).match():
                 Settings.domains.append(line)
 
-    def data_extractor(  # pylint: disable=inconsistent-return-statements
-        self, repo=None
-    ):
+    def data_extractor(self, repo=None):
         """
         This method will read all domains.list or clean.list and append each
         domain to Settings.domains and each IP to Settings.ips.
         """
 
-        if not repo:  # pragma: no cover
-            with Pool((cpu_count() // Settings.core_usage) * 10) as pool:
-                for domains, ips in pool.map(
-                    self.data_extractor, Settings.repositories
-                ):
-                    Settings.domains.extend(domains)
-                    Settings.ips.extend(ips)
-
-                    Settings.domains = Helpers.List(Settings.domains).format()
-                    Settings.ips = Helpers.List(Settings.ips).format()
-
-        # list(map(self.data_extractor, Settings.repositories))
-
+        if not repo:
+            list(map(self.data_extractor, Settings.repositories))
         else:
             domains_url = (Settings.raw_link + "domains.list") % repo
             clean_url = (Settings.raw_link + "clean.list") % repo
@@ -511,65 +395,53 @@ class Initiate(object):
             domains_url_data = get(domains_url)
 
             if clean_url_data.status_code == 200:
-                print("Extracting domains and ips from %s (clean.list)" % repo, end=" ")
+                print(
+                    "Extracting, cleaning and formating of domains and ips from %s (clean.list)"
+                    % repo,
+                    end=" ",
+                )
 
                 data = clean_url_data
             elif domains_url_data.status_code == 200:
                 print(
-                    "Extracting domains and ips from %s (domain.list)" % repo, end=" "
+                    "Extracting, cleaning and formating of domains and ips from %s (domain.list)"
+                    % repo,
+                    end=" ",
                 )
 
                 data = domains_url_data
             else:
-                print("Extracting domains and ips from %s (ERROR)" % repo, end=" ")
                 print(Settings.error)
                 data = ""
 
             if data:
-                list(map(self._data_parser, data.text.split("\n")))
-
+                formated_data = list(map(self._format_line, data.text.split("\n")))
+                whitelisted = Whitelist(string="\n".join(formated_data)).get()
+                
+                if whitelisted:
+                    list(map(self._data_parser, whitelisted.split("\n")))
+                
+                    Settings.domains = Helpers.List(Settings.domains).format()
+                    Settings.ips = Helpers.List(Settings.ips).format()
                 print(Settings.done)
 
-                return [Settings.domains, Settings.ips]
 
-            return [[], []]
-
-
-class Generate(object):  # pragma: no cover
+class Generate:
     """
     This class generate what we need.
     """
 
     def __init__(self):
-        if __name__ == "__main__":
-            print("\n")
-            to_execute = [
-                self.dotted_format,
-                self.hosts_deny_format,
-                self.hosts_unix_format,
-                self.hosts_windows_format,
-                self.plain_text_domain_format,
-                self.plain_text_ips_format,
-                self.readme_md,
-                self.super_hosts_deny_format,
-            ]
-
-            with Pool((cpu_count() // Settings.core_usage) * 10) as pool:
-                pool.map(self._execute, to_execute)
-
-            print("\n")
-
-    @classmethod
-    def _execute(cls, method_name):
-        """
-        This method execute the function with the given name.
-
-        Argument:
-            - method_name: function
-                The method to run.
-        """
-
-        method_name()
+        print("\n")
+        self.dotted_format()
+        self.plain_text_domain_format()
+        self.plain_text_ips_format()
+        self.hosts_deny_format()
+        self.super_hosts_deny_format()
+        self.hosts_windows_format()
+        self.hosts_unix_format()
+        self.readme_md()
+        print("\n")
 
     @classmethod
     def dotted_format(cls):
@@ -742,7 +614,7 @@ class Generate(object):  # pragma: no cover
         print(Settings.done)
 
 
-class Compress(object):  # pragma: no cover   # pylint: disable=too-few-public-methods
+class Compress:  # pylint: disable=too-few-public-methods
     """
     This class run and manage the compression
     """
@@ -758,37 +630,25 @@ class Compress(object):  # pragma: no cover   # pylint: disable=too-few-public-m
             Settings.hosts_unix_file,
         ]
 
-        with Pool((cpu_count() // Settings.core_usage) * 10) as pool:
-            pool.map(self.compression_logic, to_compresss)
+        for file in to_compresss:
+            compress_into_zip = "%s.zip" % file
+            compress_into_tar_gz = "%s.tar.gz" % file
 
-    @classmethod
-    def compression_logic(cls, file):
-        """
-        This method provide the compression logic.
+            print("\n")
+            print("Compression of %s into %s" % (file, compress_into_zip), end=" ")
+            Helpers.File(file).zip_compress(compress_into_zip)
+            print(Settings.done)
 
-        Argument:
-            - file: str
-                The file to compress.
-        """
+            print("Compression of %s into %s" % (file, compress_into_tar_gz), end=" ")
+            Helpers.File(file).tar_gz_compress(compress_into_tar_gz)
+            print(Settings.done)
 
-        compress_into_zip = "%s.zip" % file
-        compress_into_tar_gz = "%s.tar.gz" % file
-
-        print("\n")
-        print("Compression of %s into %s" % (file, compress_into_zip), end=" ")
-        Helpers.File(file).zip_compress(compress_into_zip)
-        print(Settings.done)
-
-        print("Compression of %s into %s" % (file, compress_into_tar_gz), end=" ")
-        Helpers.File(file).tar_gz_compress(compress_into_tar_gz)
-        print(Settings.done)
-
-        print("Deletion of %s" % file, end=" ")
-        Helpers.File(file).delete()
-        print(Settings.done)
+            print("Deletion of %s" % file, end=" ")
+            Helpers.File(file).delete()
+            print(Settings.done)
 
 
-class Deploy(object):  # pragma: no cover # pylint: disable=too-few-public-methods
+class Deploy:  # pylint: disable=too-few-public-methods
     """
     This class will deploy our files to upstream.
     """
@@ -811,13 +671,13 @@ class Deploy(object):  # pragma: no cover # pylint: disable=too-few-public-metho
             pass
 
 
-class Helpers(object):  # pylint: disable=too-few-public-methods
+class Helpers:  # pylint: disable=too-few-public-methods
     """
     Well, thanks to those helpers :-)
     """
 
     @classmethod
-    def travis_permissions(cls):  # pragma: no cover
+    def travis_permissions(cls):
         """
         Set permissions in order to avoid issues before commiting.
         """
@@ -839,16 +699,17 @@ class Helpers(object):  # pylint: disable=too-few-public-methods
 
             print("\r", end="")
 
-            if Helpers.Command(
-                "git config core.sharedRepository", False
-            ).execute() == "":
+            if (
+                Helpers.Command("git config core.sharedRepository", False).execute()
+                == ""
+            ):
                 Helpers.Command(
                     "git config core.sharedRepository group", False
                 ).execute()
         except KeyError:
             pass
 
-    class List(object):  # pylint: disable=too-few-public-methods
+    class List:  # pylint: disable=too-few-public-methods
         """
         List manipulation.
         """
@@ -866,11 +727,10 @@ class Helpers(object):  # pylint: disable=too-few-public-methods
 
             try:
                 return sorted(list(set(self.main_list)), key=str.lower)
-
             except TypeError:
                 return self.main_list
 
-    class File(object):  # pylint: disable=too-few-public-methods
+    class File:  # pylint: disable=too-few-public-methods
         """
         File treatment/manipulations.
 
@@ -907,7 +767,7 @@ class Helpers(object):  # pylint: disable=too-few-public-methods
                     with open(self.file, "a", encoding="utf-8") as file:
                         file.write(data_to_write)
 
-        def zip_compress(self, destination):  # pragma: no cover
+        def zip_compress(self, destination):
             """
             Compress a file into a zip.
 
@@ -920,7 +780,7 @@ class Helpers(object):  # pylint: disable=too-few-public-methods
                 with ZipFile(destination, "w") as thezip:
                     thezip.write(self.file)
 
-        def tar_gz_compress(self, destination):  # pragma: no cover
+        def tar_gz_compress(self, destination):
             """
             Compress a file into a tar.gz.
 
@@ -938,16 +798,12 @@ class Helpers(object):  # pylint: disable=too-few-public-methods
             Delete a given file path.
             """
 
-            if isinstance(self.file, list):
-                for file in self.file:
-                    Helpers.File(file).delete()
-            else:
-                try:
-                    remove(self.file)
-                except OSError:
-                    pass
+            try:
+                remove(self.file)
+            except OSError:
+                pass
 
-    class Regex(object):  # pylint: disable=too-few-public-methods
+    class Regex:  # pylint: disable=too-few-public-methods
 
         """A simple implementation ot the python.re package
 
@@ -962,7 +818,7 @@ class Helpers(object):  # pylint: disable=too-few-public-methods
         :param occurences: A int, the number of occurence to replace.
         """
 
-        def __init__(self, data, regex, **args):  # pragma: no cover
+        def __init__(self, data, regex, **args):
             # We initiate the needed variable in order to be usable all over
             # class
             self.data = data
@@ -1007,23 +863,23 @@ class Helpers(object):  # pylint: disable=too-few-public-methods
                 if self.rematch:  # pylint: disable=no-member
                     for data in pre_result:
                         if isinstance(data, tuple):
-                            result.extend(list(data))  # pragma: no cover
+                            result.extend(list(data))
                         else:
                             result.append(data)
 
                     if self.group != 0:  # pylint: disable=no-member
                         return result[self.group]  # pylint: disable=no-member
-
                 else:
                     result = pre_result.group(
                         self.group  # pylint: disable=no-member
                     ).strip()
 
                 return result
-
-            elif not self.return_data and pre_result is not None:  # pylint: disable=no-member
+            elif (
+                not self.return_data  # pylint: disable=no-member
+                and pre_result is not None
+            ):
                 return True
-
             return False
 
         def not_matching_list(self):
@@ -1048,10 +904,9 @@ class Helpers(object):  # pylint: disable=too-few-public-methods
                     self.data,
                     self.occurences,  # pylint: disable=no-member
                 )
-
             return self.data
 
-    class Command(object):
+    class Command:
         """
         Shell command execution.
 
@@ -1072,11 +927,10 @@ class Helpers(object):  # pylint: disable=too-few-public-methods
             Arguments:
                 to_decode: byte(s), Output of a command to decode.
             """
-
             if to_decode is not None:
+                # return to_decode.decode(self.decode_type)
                 return str(to_decode, self.decode_type)
-
-            return False  # pragma: no cover
+            return False
 
         def execute(self):
             """Execute the given command."""
@@ -1084,13 +938,11 @@ class Helpers(object):  # pylint: disable=too-few-public-methods
             if not self.stdout:
                 process = Popen(self.command, stdout=PIPE, stderr=PIPE, shell=True)
             else:
-                process = Popen(
-                    self.command, stderr=PIPE, shell=True
-                )  # pragma: no cover
+                process = Popen(self.command, stderr=PIPE, shell=True)
 
             (output, error) = process.communicate()
 
-            if process.returncode != 0:  # pragma: no cover
+            if process.returncode != 0:
                 decoded = self.decode_output(error)
 
                 if not decoded:
@@ -1101,7 +953,21 @@ class Helpers(object):  # pylint: disable=too-few-public-methods
             return self.decode_output(output)
 
 
-if __name__ == "__main__":  # pragma: no cover
+if __name__ == "__main__":
+    try:
+        from whitelisting import Whitelist
+    except ModuleNotFoundError:
+        WHITELISTING_URL = "https://raw.githubusercontent.com/Ultimate-Hosts-Blacklist/dev-center/whitelisting/whitelisting.py"  # pylint: disable=line-too-long
+        REQ = get(WHITELISTING_URL)
+        DESTINATION = "whitelisting.py"
+
+        if REQ.status_code == 200:
+            Helpers.File(DESTINATION).write(REQ.text, overwrite=True)
+        else:
+            raise Exception("Unable to fetch the whitelisting script. Is GiHub down?")
+
+        from whitelisting import Whitelist
+
     Initiate()
     Generate()
     Compress()
