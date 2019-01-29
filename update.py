@@ -210,6 +210,21 @@ class Initiate:
     def __init__(self):
         self.travis()
         Helpers.travis_permissions()
+        
+        WHITELISTING_URL = "https://raw.githubusercontent.com/Ultimate-Hosts-Blacklist/dev-center/whitelisting/whitelisting.py"  # pylint: disable=line-too-long
+        REQ = get(WHITELISTING_URL)
+        DESTINATION = "whitelisting.py"
+
+        if REQ.status_code == 200:
+            Helpers.File(DESTINATION).write(REQ.text, overwrite=True)
+        else:
+            raise Exception("Unable to fetch the whitelisting script. Is GiHub down?")
+            
+        try:
+            from whitelisting import Whitelist
+        except ModuleNotFoundError:
+            raise Exception("Unable to find the whitelisting script.")
+        
         self.list_of_input_sources()
         self.data_extractor()
 
@@ -661,9 +676,9 @@ class Deploy:  # pylint: disable=too-few-public-methods
             Helpers.travis_permissions()
 
             Helpers.Command(
-                "git add --all && git commit -a -m '%s' && git reflog expire --expire=now --all && git gc --prune=now --aggressive && git push origin %s"
+                "git add --all && git commit -a -m '%s' && git push origin %s"
                 % (commit_message, environ["GIT_BRANCH"]),
-                True,
+                False,
             ).execute()
 
             get(Settings.deploy_raw_url)
@@ -954,20 +969,6 @@ class Helpers:  # pylint: disable=too-few-public-methods
 
 
 if __name__ == "__main__":
-    try:
-        from whitelisting import Whitelist
-    except ModuleNotFoundError:
-        WHITELISTING_URL = "https://raw.githubusercontent.com/Ultimate-Hosts-Blacklist/dev-center/whitelisting/whitelisting.py"  # pylint: disable=line-too-long
-        REQ = get(WHITELISTING_URL)
-        DESTINATION = "whitelisting.py"
-
-        if REQ.status_code == 200:
-            Helpers.File(DESTINATION).write(REQ.text, overwrite=True)
-        else:
-            raise Exception("Unable to fetch the whitelisting script. Is GiHub down?")
-
-        from whitelisting import Whitelist
-
     Initiate()
     Generate()
     Compress()
