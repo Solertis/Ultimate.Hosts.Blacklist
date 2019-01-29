@@ -396,8 +396,11 @@ class Initiate:
         """
 
         if not repo:
+            print("Reading the list of repositories", end=" ") 
             list(map(self.data_extractor, Settings.repositories))
+            print(Settings.error)
         else:
+            print("Looking for %s" % repo)
             domains_url = (Settings.raw_link + "domains.list") % repo
             clean_url = (Settings.raw_link + "clean.list") % repo
 
