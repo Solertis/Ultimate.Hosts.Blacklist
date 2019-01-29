@@ -219,11 +219,6 @@ class Initiate:
             Helpers.File(DESTINATION).write(REQ.text, overwrite=True)
         else:
             raise Exception("Unable to fetch the whitelisting script. Is GiHub down?")
-            
-        try:
-            from whitelisting import Whitelist
-        except ModuleNotFoundError:
-            raise Exception("Unable to find the whitelisting script.")
         
         self.list_of_input_sources()
         self.data_extractor()
@@ -431,6 +426,10 @@ class Initiate:
 
             if data:
                 formated_data = list(map(self._format_line, data.text.split("\n")))
+                try:
+                    from whitelisting import Whitelist
+                except ModuleNotFoundError:
+                    raise Exception("Unable to find the whitelisting script.")
                 whitelisted = Whitelist(string="\n".join(formated_data)).get()
                 
                 if whitelisted:
@@ -678,7 +677,7 @@ class Deploy:  # pylint: disable=too-few-public-methods
             Helpers.Command(
                 "git add --all && git commit -a -m '%s' && git push origin %s"
                 % (commit_message, environ["GIT_BRANCH"]),
-                False,
+                True,
             ).execute()
 
             get(Settings.deploy_raw_url)
@@ -719,7 +718,7 @@ class Helpers:  # pylint: disable=too-few-public-methods
                 == ""
             ):
                 Helpers.Command(
-                    "git config core.sharedRepository group", False
+                    "git config core.sharedRepository group", True
                 ).execute()
         except KeyError:
             pass
