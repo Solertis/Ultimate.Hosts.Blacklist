@@ -87,7 +87,7 @@ class Settings:  # pylint: disable=too-few-public-methods
     repositories = []
 
     # This variable set the repository to ignore.
-    repo_to_ignore = ["repository-structure", "whitelist"]
+    repo_to_ignore = ["repository-structure", "whitelist", "dev-center"]
 
     # This variable save the list of all domains.
     #
